@@ -1,8 +1,17 @@
-# One Scan is Enough
+<h1 align="center">One Scan is Enough</h1>
 
-Code for *One Scan is Enough: Demonstration-Free Adaptation for Language-Guided Navigation* (NeurIPS 2026).
+<p align="center">Code for <i>One Scan is Enough: Demonstration-Free Adaptation for Language-Guided Navigation</i> (NeurIPS 2026).</p>
 
-[Project page](https://one-scan-is-enough.github.io/) | [Paper](https://arxiv.org/abs/2610.33794) | [Data](https://huggingface.co/datasets/dynamica/one-scan-is-enough-demo-apartment) | [Model](https://huggingface.co/dynamica/RealNav-Base)
+<p align="center">
+  <a href="https://one-scan-is-enough.github.io/"><img alt="Project page" src="https://img.shields.io/badge/Project-Page-2563eb?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PHBhdGggZD0iTTIgMTJoMjAiLz48cGF0aCBkPSJNMTIgMmExNS4zIDE1LjMgMCAwIDEgNCAxMCAxNS4zIDE1LjMgMCAwIDEtNCAxMCAxNS4zIDE1LjMgMCAwIDEtNC0xMCAxNS4zIDE1LjMgMCAwIDEgNC0xMHoiLz48L3N2Zz4K&labelColor=1d2330"></a>
+  <a href="https://arxiv.org/abs/2610.33794"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2610.33794-b31b1b?style=for-the-badge&logo=arxiv&logoColor=white&labelColor=1d2330"></a>
+  <a href="https://huggingface.co/datasets/dynamica/one-scan-is-enough-demo-apartment"><img alt="Data" src="https://img.shields.io/badge/Data-Demo_Apartment-f08c00?style=for-the-badge&logo=huggingface&logoColor=white&labelColor=1d2330"></a>
+  <a href="https://huggingface.co/dynamica/RealNav-Base"><img alt="Model" src="https://img.shields.io/badge/Model-RealNav--Base-0ca678?style=for-the-badge&logo=huggingface&logoColor=white&labelColor=1d2330"></a>
+</p>
+
+<p align="center">
+  <a href="https://one-scan-is-enough.github.io/"><img src="assets/teaser.jpg" width="100%" alt="Overview: a scene scan is compiled by Scan2Instruction, PRPT-KS post-trains RealNav, and the robot follows language instructions in real scenes"></a>
+</p>
 
 A brief handheld RGB-D scan of a building is enough to adapt a language-guided navigation policy to it, with no demonstrations and no human labels. The code has three parts:
 
