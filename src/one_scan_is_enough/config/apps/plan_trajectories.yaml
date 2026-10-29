@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - /planning_map@planning_map: default
+  - /planner@planner: default
+  - /path_sampling@path_sampling: default
+  - _self_
+input:
+  scene_dir: ???
+seed: 0
+# Distances below are in meters on the planning map, whose obstacles are
+# grown by its clearance.
+planning:
+  num_trajectories: 160
+  goal_near_obstacle_max_m: 1.0
+  drop_clear_path_prob: 0.5
+  ring_min_start_goal_dist_m: 3.0
+  ring_band_m: 0.02
+  ring_min_ref_geodesic_m: 5.0
+  ring_max_start_goal_dist_m: 15.0
+  ring_max_tries: 32
+  candidate_multiplier: 1.5
+  ring_attempt_multiplier: 8.0
+  diversity_pair_weight: 0.4
+execution:
+  workers: 4
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/plan_trajectories/${now:%Y-%m-%d_%H-%M-%S}

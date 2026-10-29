@@ -1,0 +1,28 @@
+# @package _global_
+input:
+  tum_dir: ???
+  # orbslam3: CameraTrajectory.txt written by ORB-SLAM3 into the TUM directory.
+  # arkit: groundtruth.txt with the ARKit poses of a Stray Scanner capture.
+  poses: orbslam3
+output:
+  scene_dir: ???
+seed: 0
+export:
+  # Every frame_step-th associated frame is exported.
+  frame_step: 4
+  jpeg: true
+  workers: 16
+  seed: ${seed}
+  # Initial PGSR points backprojected from the exported depth maps.
+  point_cloud:
+    # Pixel stride after downsampling the depth maps by image_downsample.
+    stride: 8
+    image_downsample: 2
+    max_depth_m: 10.0
+    # Frames share this total in proportion to their valid depth samples.
+    target_points: 200000
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/export_pgsr/${now:%Y-%m-%d_%H-%M-%S}

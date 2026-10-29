@@ -1,0 +1,10 @@
+# The planning map of one_scan_is_enough.planning.path_planner.planning_map: the
+# navigable BEV resampled to 5 mm cells, eroded by clearance_m and kept to its
+# largest components, at most top_k until they cover top_p of the area. Its
+# free cells are the feasible region: reference paths, closed-loop runs and
+# the post-training safety penalty all use them, and clearance_m sets the
+# safety margin.
+resolution: 0.005
+clearance_m: 0.15
+top_k: 5
+top_p: 0.9

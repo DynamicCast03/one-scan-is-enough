@@ -1,0 +1,17 @@
+# @package _global_
+defaults:
+  - /environment@environment: gaussian
+  - _self_
+scene_dir: ???
+# A trajectory file with instructions; evaluation episodes start at the first
+# reference pose and end at the last.
+trajectories: ${scene_dir}/trajectories.h5
+# The RealNav checkpoint to evaluate.
+checkpoint: ???
+output_dir: ???
+success_radius_m: 1.5
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${output_dir}

@@ -1,0 +1,8 @@
+# A* on the planning map of one_scan_is_enough.planning.path_planner, shared by reference
+# trajectory planning and closed-loop planner takeover. The cost of entering a
+# cell is distance_weight over its obstacle distance, raised further below
+# min_clearance_m. Simplified paths replace A* cells by chords that stay on
+# free cells and deviate at most rdp_tolerance_m from the A* path.
+distance_weight: 30.0
+min_clearance_m: 0.3
+rdp_tolerance_m: 0.05

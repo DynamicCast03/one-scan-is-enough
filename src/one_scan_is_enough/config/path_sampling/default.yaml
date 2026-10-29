@@ -1,0 +1,6 @@
+# Move and turn templates of one_scan_is_enough.planning.path_sampling. Training labels
+# and planner takeover actions share them.
+max_lateral_m: 0.125
+max_forward_m: 0.125
+max_theta_deg: 15.0
+dense_stride_m: 0.005

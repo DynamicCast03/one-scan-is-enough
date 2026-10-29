@@ -1,0 +1,78 @@
+# @package _global_
+defaults:
+  - /environment@environment: gaussian
+  - _self_
+# A scene package whose trajectories.h5 holds rendered training images and
+# instructions; rollouts start from these trajectories and their steps anchor
+# behavior cloning.
+scene_dir: ???
+# The RealNav checkpoint to adapt, such as the pretrained policy.
+base: ???
+output_dir: ???
+seed: 0
+rollout:
+  # Whole episodes are rolled out until the buffer holds this many decisions.
+  buffer_steps: 256
+  # Sampling favors short episodes early and long ones late; zero is uniform.
+  length_curriculum: 1.0
+  # Admissibility test: the planner acts when the policy action leaves the
+  # planning map or its discounted progress is below -progress_tolerance,
+  # targeting the reference lookahead positions ahead of the nearest one.
+  takeover:
+    progress_tolerance: 0.05
+    lookahead: 10
+    increment: 3
+  reward:
+    success: 1.0
+    success_radius_m: 1.0
+    # Moves with an executed waypoint outside the free cells of the planning map.
+    obstacle_penalty: 0.15
+    gamma: 0.99
+    gae_lambda: 0.95
+  # Preference pair weights: goal_stop when the planner action Pareto-dominates
+  # the policy action and stops at the goal, dominant when it only dominates,
+  # and other for the remaining rejected actions.
+  preference_weights:
+    dominant: 1.0
+    goal_stop: 1.1
+    other: 0.9
+# Weights of the policy gradient, preference and behavior cloning terms.
+loss:
+  rl: 0.1
+  dpo: 0.05
+  bc: 1.0
+  clip_epsilon: 0.2
+  dpo_beta: 0.1
+  # Gaussian likelihood scale in normalized waypoint space, decayed over rounds.
+  sigma_start: 1.5
+  sigma_end: 0.5
+training:
+  # Per device and micro-batch: rollout decisions and reference steps, the
+  # expert buffer that anchors behavior cloning.
+  rollout_batch: 2
+  anchor_batch: 3
+  # Reference steps whose four-action horizon reaches the trajectory end repeat.
+  anchor_end_repeat: 3
+  gradient_accumulation_steps: 2
+  # Processes that load and preprocess micro-batches while the GPU trains.
+  loader_workers: 4
+  # adamw: DeepSpeed ZeRO-1 with fp32 master weights. adamw8bit: 8-bit states
+  # and stochastically rounded bf16 weights (torchao), for a single GPU.
+  optimizer: adamw
+  # Peak learning rates; zero freezes a module.
+  learning_rates:
+    vision: 8.0e-6
+    language: 4.0e-6
+    head: 2.0e-5
+  warmup_ratio: 0.03
+  min_lr_ratio: 0.01
+  gradient_checkpointing: true
+  # Optimizer steps; null ends after one pass over the reference steps.
+  max_steps: null
+  # Rollout rounds between checkpoints.
+  save_every: 100
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: ${output_dir}

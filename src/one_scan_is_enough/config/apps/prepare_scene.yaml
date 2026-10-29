@@ -1,0 +1,52 @@
+# @package _global_
+input:
+  gaussian_ply: ???
+  scene_name: ???
+output:
+  scene_dir: ???
+seed: 0
+gaussians:
+  opacity_min: 0.02
+  scale_max_quantile: 0.98
+  batch_size: 16384
+  ground_pool_size: 200000
+  support_sigma: 3.0
+alignment:
+  voxel_size: 0.05
+  num_samples: 20000
+  distance_threshold: 0.02
+  ransac_n: 3
+  num_iterations: 1000
+  # Planes extracted per attempt, including skipped small ones.
+  max_plane_candidates: 10
+  min_plane_inlier_ratio: 0.02
+  one_side_ratio: 0.9
+  one_side_margin_m: 0.5
+  near_distance_m: 0.3
+  # Candidate planes within this angle of the largest one are parallel to it,
+  # and the lowest of them is the ground.
+  parallel_max_deg: 10.0
+  resample_attempts: 8
+bev:
+  y_min: 0.3
+  y_max: 1.2
+  resolution: 0.02
+  obstacle_close_size_m: 0.18
+  min_component_area_m2: 3.0
+  ground_color_y_min: -0.5
+  ground_color_y_max: 0.3
+  top_color_y_max: 20.0
+  top_color_alpha_min: 0.5
+calibration:
+  host: 127.0.0.1
+  port: 8765
+  open_browser: true
+  skip_manual: false
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/prepare_scene/${now:%Y-%m-%d_%H-%M-%S}
+  sweep:
+    dir: outputs/prepare_scene/${now:%Y-%m-%d_%H-%M-%S}
+    subdir: ${hydra.job.num}

@@ -1,0 +1,32 @@
+# @package _global_
+input:
+  capture_dir: ???
+  # stray: a Stray Scanner export, whose ARKit poses become groundtruth.txt.
+  # realsense: a RealSense recording without poses, for ORB-SLAM3.
+  format: stray
+output:
+  tum_dir: ???
+stray:
+  # Inclusive [start, end] range of video frames; null keeps every frame.
+  frame_range: null
+  # Target frame rate; null keeps every frame.
+  fps: null
+  # Keep the sharpest frame of each interval instead of the first, and
+  # at least min_frames frames.
+  sharpest: false
+  min_frames: 0
+  # RGB frames as JPEG of quality 95 instead of PNG.
+  jpeg: true
+  workers: 16
+realsense:
+  # Recording frame rate, which defines the timestamps.
+  fps: 30.0
+  # Depth image units per meter.
+  depth_scale: 1000.0
+  # Link the recording images instead of copying them.
+  symlink: false
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/convert_capture/${now:%Y-%m-%d_%H-%M-%S}

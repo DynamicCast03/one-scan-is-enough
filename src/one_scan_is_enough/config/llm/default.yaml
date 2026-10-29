@@ -1,0 +1,20 @@
+# The multimodal language model of instruction synthesis, served behind an
+# OpenAI-compatible Chat Completions or Responses endpoint. Fill base_url
+# and model.
+backend:
+  api: chat_completions
+  base_url: ???
+  # Environment variable that holds the API key; null sends no key.
+  api_key_env: ONE_SCAN_LLM_API_KEY
+  timeout_s: 600
+  max_retries: 5
+  # Use the proxy settings of the environment.
+  trust_env: true
+  proxy: null
+  # Maximum image parts accepted by the endpoint; null disables this check.
+  max_images: null
+  # Provider-specific request fields, for example reasoning settings.
+  extra_body: {}
+model: ???
+# Requests in flight.
+concurrency: 4

@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map Editor</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      --page: #f4f5f7;
+      --panel: #ffffff;
+      --line: #e2e5ea;
+      --control: #f1f3f5;
+      --ink: #1d2025;
+      --muted: #646b76;
+      --accent: #2563eb;
+      --accent-soft: #e8efff;
+      --blocked: #e5484d;
+      --stage: #e9ebee;
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 12px rgba(16, 24, 40, 0.08);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--page);
+      color: var(--ink);
+      font-size: 14px;
+    }
+    #app {
+      display: grid;
+      grid-template-columns: 304px 1fr;
+      height: 100%;
+    }
+
+    /* Side panel */
+    #side {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 20px;
+      overflow-y: auto;
+      background: var(--panel);
+      border-right: 1px solid var(--line);
+    }
+    .steps {
+      display: flex;
+      gap: 16px;
+      margin: 0 0 18px;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .steps li { display: flex; align-items: center; gap: 8px; }
+    .steps .dot {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--control);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .steps .current { color: var(--ink); font-weight: 600; }
+    .steps .current .dot { background: var(--accent); color: #fff; }
+    .steps .done .dot { background: var(--accent-soft); color: var(--accent); }
+    h1 { margin: 0 0 8px; font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
+    #instructions { margin: 0; color: var(--muted); line-height: 1.5; }
+    section { display: flex; flex-direction: column; gap: 10px; }
+    h2 { margin: 0; font-size: 13px; font-weight: 600; }
+    .row > h2 { flex: 1; }
+    .row { display: flex; align-items: center; gap: 10px; }
+    .row > .label { width: 76px; flex: none; color: var(--muted); }
+    .value { min-width: 48px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+    button {
+      height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: var(--control); }
+    button:disabled { color: #a8aeb7; cursor: default; }
+    button:focus-visible, input:focus-visible, summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    .segmented {
+      display: grid;
+      grid-auto-columns: 1fr;
+      grid-auto-flow: column;
+      gap: 2px;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--control);
+    }
+    .segmented button {
+      height: 30px;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+    }
+    .segmented button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.6); color: var(--ink); }
+    .segmented button.active {
+      background: var(--panel);
+      color: var(--ink);
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
+    }
+    .tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .tools button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      height: 56px;
+      padding: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tools svg { width: 20px; height: 20px; }
+    .tools button.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .paint { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .paint button { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .paint button.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); font-weight: 600; }
+    .swatch { width: 12px; height: 12px; border-radius: 3px; }
+    .swatch.blocked { background: var(--blocked); }
+    .swatch.free { border: 1px solid #b9bfc8; background: #fff; }
+    .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); }
+    .field {
+      display: flex;
+      align-items: center;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .field:focus-within { border-color: var(--accent); }
+    .field input {
+      width: 52px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .field span { margin-left: 2px; color: var(--muted); }
+
+    #finish { display: flex; flex-direction: column; gap: 14px; margin-top: auto; }
+    details { color: var(--muted); }
+    summary { cursor: pointer; }
+    #keys {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 12px;
+      margin: 12px 0 0;
+      font-size: 13px;
+    }
+    #keys dt { justify-self: start; }
+    #keys dd { margin: 0; }
+    kbd {
+      padding: 1px 6px;
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: var(--panel);
+      color: var(--ink);
+      font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+    #save {
+      height: 42px;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+    #save:hover:not(:disabled) { background: #1d4ed8; }
+    #save:disabled { border-color: #c7d2fe; background: #c7d2fe; color: #fff; }
+
+    /* Map */
+    #stage { position: relative; overflow: hidden; background: var(--stage); }
+    #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+    #view.panning { cursor: grabbing; }
+    .floating {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    #zoom { right: 16px; bottom: 16px; padding: 3px; }
+    #zoom button { height: 30px; min-width: 30px; padding: 0 8px; border: 0; background: transparent; }
+    #zoom button:hover { background: var(--control); }
+    #zoomText { min-width: 52px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+    #zoom .divider { width: 1px; height: 18px; margin: 0 3px; background: var(--line); }
+    #toast { left: 50%; bottom: 16px; padding: 8px 14px; transform: translateX(-50%); }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(244, 245, 247, 0.85);
+    }
+    .card {
+      max-width: 380px;
+      padding: 24px 28px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .card strong { display: block; margin-bottom: 6px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted); line-height: 1.5; white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside id="side">
+      <header>
+        <ol class="steps">
+          <li data-index="rotate"><span class="dot">1</span>Align walls</li>
+          <li data-index="edit"><span class="dot">2</span>Edit area</li>
+        </ol>
+        <h1 id="title"></h1>
+        <p id="instructions"></p>
+      </header>
+
+      <section>
+        <h2>View</h2>
+        <div class="segmented" id="baseButtons">
+          <button data-base="top" title="Color of the highest Gaussian in each cell (1)">Top</button>
+          <button data-base="ground" title="Color of the floor (2)">Ground</button>
+          <button data-base="none" title="No background (3)">None</button>
+        </div>
+        <div class="row">
+          <span class="label">Mask</span>
+          <input id="opacity" type="range" min="0" max="100" value="45" aria-label="Mask opacity">
+          <span class="value" id="opacityText"></span>
+        </div>
+      </section>
+
+      <section data-step="rotate">
+        <div class="row">
+          <h2>Rotation</h2>
+          <label class="field">
+            <input id="rotationNumber" type="number" min="-90" max="90" step="0.1" value="0" aria-label="Rotation in degrees">
+            <span>°</span>
+          </label>
+          <button id="rotationReset" title="Reset to 0°">Reset</button>
+        </div>
+        <input id="rotation" type="range" min="-90" max="90" step="0.1" value="0" aria-label="Rotation">
+        <div class="row">
+          <span class="label">Grid</span>
+          <input id="grid" type="range" min="20" max="400" value="80" aria-label="Grid spacing">
+          <span class="value" id="gridText"></span>
+        </div>
+      </section>
+
+      <section data-step="edit">
+        <h2>Tool</h2>
+        <div class="tools" id="toolButtons">
+          <button data-tool="brush" title="Brush (B)">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="10" r="2.5" fill="currentColor"/></svg>
+            Brush
+          </button>
+          <button data-tool="line" title="Line (L)">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4.5 15.5 15.5 4.5"/><circle cx="4.5" cy="15.5" r="1.4" fill="currentColor"/><circle cx="15.5" cy="4.5" r="1.4" fill="currentColor"/></svg>
+            Line
+          </button>
+          <button data-tool="rect" title="Rectangle (R)">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="5" width="13" height="10" rx="1.5"/></svg>
+            Rect
+          </button>
+          <button data-tool="polygon" title="Polygon (P)">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 15.5 5.5 4.5l10 2.5 1 8.5Z"/></svg>
+            Polygon
+          </button>
+          <button data-tool="fill" title="Fill a connected region (F)">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="m3.5 9.5 6-6 6 6-6 6Z"/><path d="M3.5 9.5h12" /><path d="M16.5 12.5c0 1.4-1.2 2.3-1.2 3.3a1.2 1.2 0 0 0 2.4 0c0-1-1.2-1.9-1.2-3.3Z" fill="currentColor" stroke-width="1"/></svg>
+            Fill
+          </button>
+        </div>
+        <div class="paint" id="paintButtons">
+          <button data-paint="blocked" title="Paint as blocked (X swaps)"><span class="swatch blocked"></span>Blocked</button>
+          <button data-paint="free" title="Paint as navigable (X swaps)"><span class="swatch free"></span>Navigable</button>
+        </div>
+        <div class="row">
+          <span class="label">Brush size</span>
+          <input id="brush" type="range" min="1" max="200" value="15" aria-label="Brush size">
+          <span class="value" id="brushText"></span>
+        </div>
+        <div class="actions">
+          <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+          <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
+          <button id="resetMask" title="Restore the automatic map">Reset</button>
+        </div>
+      </section>
+
+      <div id="finish">
+        <details>
+          <summary>Keyboard shortcuts</summary>
+          <dl id="keys"></dl>
+        </details>
+        <button id="save" disabled>Save and continue</button>
+      </div>
+    </aside>
+
+    <main id="stage">
+      <canvas id="view"></canvas>
+      <div class="floating" id="zoom">
+        <button id="zoomOut" title="Zoom out (-)" aria-label="Zoom out">−</button>
+        <span id="zoomText"></span>
+        <button id="zoomIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
+        <span class="divider"></span>
+        <button id="fit" title="Fit to window (0)">Fit</button>
+      </div>
+      <div class="floating" id="toast" hidden></div>
+      <div id="overlay"><div class="card"><strong id="overlayTitle">Loading</strong><p id="overlayText"></p></div></div>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    const BLOCKED_RGB = [229, 72, 77];
+    const STAGE_COLOR = "#e9ebee";
+    const UNDO_BYTES = 1.5e9;
+    const STEP_TEXT = {
+      rotate: {
+        title: "Align the walls",
+        instructions: "Rotate the map until the main walls run parallel to the grid lines.",
+      },
+      edit: {
+        title: "Edit the navigable area",
+        instructions: "Mark areas the robot must not enter as blocked, and mark wrongly blocked cells as navigable.",
+      },
+    };
+    const KEYS = {
+      common: [
+        ["Scroll", "Zoom"],
+        ["Space + drag", "Pan, also with the right button"],
+        ["0", "Fit to window"],
+        ["1 2 3", "Switch to Top, Ground or None"],
+        ["M", "Show or hide the mask"],
+      ],
+      rotate: [["← →", "Rotate by 0.1°, or 1° with Shift"]],
+      edit: [
+        ["B L R P F", "Brush, line, rectangle, polygon, fill"],
+        ["X", "Swap blocked and navigable"],
+        ["[ ]", "Brush size"],
+        ["Enter", "Close the polygon, also with a double-click"],
+        ["Backspace", "Remove the last vertex"],
+        ["Esc", "Cancel the shape"],
+        ["Ctrl+Z", "Undo"],
+        ["Ctrl+Y", "Redo"],
+      ],
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const view = $("view");
+    const vctx = view.getContext("2d");
+    const state = {
+      meta: null,
+      base: "top",
+      bases: {},
+      opacity: 0.45,
+      maskVisible: true,
+      zoom: 1,
+      panX: 0,
+      panY: 0,
+      rotation: 0,
+      grid: 80,
+      tool: "brush",
+      paint: "blocked",
+      brush: 15,
+      saved: false,
+      cursor: null,
+    };
+    // Interaction state: pan drag, brush stroke, shape drag, and polygon vertices.
+    const gesture = { pan: null, stroke: null, shape: null, polygon: [], space: false };
+    const undoStack = [];
+    const redoStack = [];
+    let mask, mctx, backup, bctx, dirty;
+    let renderPending = false;
+    // The map refits on window resizes until the user zooms or pans.
+    let followWindow = true;
+    let toastTimer = null;
+
+    function toast(text, persistent = false) {
+      clearTimeout(toastTimer);
+      $("toast").textContent = text;
+      $("toast").hidden = !text;
+      if (text && !persistent) toastTimer = setTimeout(() => ($("toast").hidden = true), 2500);
+    }
+
+    function showOverlay(title, text = "") {
+      $("overlayTitle").textContent = title;
+      $("overlayText").textContent = text;
+      $("overlay").hidden = !title;
+    }
+
+    function makeCanvas(width, height) {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      return [canvas, canvas.getContext("2d")];
+    }
+
+    async function fetchBitmap(url) {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+      return createImageBitmap(await response.blob());
+    }
+
+    function formatLength(meters) {
+      return meters >= 1 ? `${meters.toFixed(2)} m` : `${Math.round(meters * 100)} cm`;
+    }
+
+    // ---------------------------------------------------------------- layers
+
+    async function loadMask() {
+      const { width, height } = state.meta;
+      const bitmap = await fetchBitmap("/mask.png");
+      mctx.globalCompositeOperation = "copy";
+      mctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      // Blocked cells become opaque red; navigable cells become transparent.
+      const image = mctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i] > 127) {
+          data[i + 3] = 0;
+        } else {
+          data[i] = BLOCKED_RGB[0];
+          data[i + 1] = BLOCKED_RGB[1];
+          data[i + 2] = BLOCKED_RGB[2];
+          data[i + 3] = 255;
+        }
+      }
+      mctx.putImageData(image, 0, 0);
+      mctx.globalCompositeOperation = "source-over";
+    }
+
+    function requestRender() {
+      if (renderPending) return;
+      renderPending = true;
+      requestAnimationFrame(render);
+    }
+
+    function render() {
+      renderPending = false;
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = view.clientWidth;
+      const cssHeight = view.clientHeight;
+      if (view.width !== Math.round(cssWidth * dpr) || view.height !== Math.round(cssHeight * dpr)) {
+        view.width = Math.round(cssWidth * dpr);
+        view.height = Math.round(cssHeight * dpr);
+      }
+      vctx.setTransform(1, 0, 0, 1, 0, 0);
+      vctx.fillStyle = STAGE_COLOR;
+      vctx.fillRect(0, 0, view.width, view.height);
+      if (!state.meta) return;
+      const { width, height } = state.meta;
+      vctx.setTransform(dpr * state.zoom, 0, 0, dpr * state.zoom, dpr * state.panX, dpr * state.panY);
+      if (state.meta.step === "rotate") {
+        vctx.translate(width / 2, height / 2);
+        vctx.rotate(-state.rotation * Math.PI / 180);
+        vctx.translate(-width / 2, -height / 2);
+      }
+      vctx.imageSmoothingEnabled = state.zoom < 2;
+      const base = state.bases[state.base];
+      if (base) {
+        vctx.drawImage(base, 0, 0);
+      } else {
+        vctx.fillStyle = "#ffffff";
+        vctx.fillRect(0, 0, width, height);
+      }
+      if (state.maskVisible && mask) {
+        vctx.globalAlpha = base ? state.opacity : 1;
+        vctx.drawImage(mask, 0, 0);
+        vctx.globalAlpha = 1;
+      }
+      if (state.meta.step === "edit") drawEditPreview();
+      vctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (state.meta.step === "rotate") drawGrid(cssWidth, cssHeight);
+    }
+
+    function drawGrid(width, height) {
+      const cx = width / 2;
+      const cy = height / 2;
+      vctx.lineWidth = 1;
+      vctx.strokeStyle = "rgba(37, 99, 235, 0.45)";
+      vctx.beginPath();
+      for (let x = cx % state.grid; x < width; x += state.grid) {
+        vctx.moveTo(Math.round(x) + 0.5, 0);
+        vctx.lineTo(Math.round(x) + 0.5, height);
+      }
+      for (let y = cy % state.grid; y < height; y += state.grid) {
+        vctx.moveTo(0, Math.round(y) + 0.5);
+        vctx.lineTo(width, Math.round(y) + 0.5);
+      }
+      vctx.stroke();
+      vctx.lineWidth = 1.5;
+      vctx.strokeStyle = "rgba(234, 88, 12, 0.9)";
+      vctx.beginPath();
+      vctx.moveTo(Math.round(cx), 0);
+      vctx.lineTo(Math.round(cx), height);
+      vctx.moveTo(0, Math.round(cy));
+      vctx.lineTo(width, Math.round(cy));
+      vctx.stroke();
+    }
+
+    function previewColor() {
+      return state.paint === "blocked" ? "rgba(229, 72, 77, 0.55)" : "rgba(22, 163, 74, 0.5)";
+    }
+
+    function drawEditPreview() {
+      const pixel = 1 / state.zoom;
+      vctx.fillStyle = previewColor();
+      vctx.strokeStyle = previewColor();
+      vctx.lineCap = "round";
+      vctx.lineJoin = "round";
+      const shape = gesture.shape;
+      if (shape && shape.tool === "line") {
+        vctx.lineWidth = state.brush;
+        vctx.beginPath();
+        vctx.moveTo(shape.start.x, shape.start.y);
+        vctx.lineTo(shape.end.x, shape.end.y);
+        vctx.stroke();
+      }
+      if (shape && shape.tool === "rect") {
+        const r = rectFrom(shape.start, shape.end);
+        vctx.fillRect(r.x, r.y, r.w, r.h);
+      }
+      const points = gesture.polygon;
+      if (points.length) {
+        const cursor = state.cursor;
+        vctx.beginPath();
+        vctx.moveTo(points[0].x, points[0].y);
+        for (const p of points.slice(1)) vctx.lineTo(p.x, p.y);
+        if (cursor) vctx.lineTo(cursor.x, cursor.y);
+        vctx.closePath();
+        vctx.fill();
+        vctx.lineWidth = 2 * pixel;
+        vctx.strokeStyle = "#2563eb";
+        vctx.stroke();
+        vctx.fillStyle = "#ffffff";
+        vctx.lineWidth = 1.5 * pixel;
+        for (const p of points) {
+          vctx.fillRect(p.x - 3.5 * pixel, p.y - 3.5 * pixel, 7 * pixel, 7 * pixel);
+          vctx.strokeRect(p.x - 3.5 * pixel, p.y - 3.5 * pixel, 7 * pixel, 7 * pixel);
+        }
+      }
+      if (state.cursor && ["brush", "line"].includes(state.tool) && !gesture.pan) {
+        vctx.lineWidth = pixel;
+        for (const [color, offset] of [["#000000", pixel], ["#ffffff", 0]]) {
+          vctx.strokeStyle = color;
+          vctx.beginPath();
+          vctx.arc(state.cursor.x, state.cursor.y, state.brush / 2 + offset, 0, Math.PI * 2);
+          vctx.stroke();
+        }
+      }
+    }
+
+    // ------------------------------------------------------------- viewport
+
+    function fit() {
+      const { width, height } = state.meta;
+      const cssWidth = view.clientWidth;
+      const cssHeight = view.clientHeight;
+      // A hidden tab has no layout yet; the resize observer fits again later.
+      followWindow = true;
+      if (!cssWidth || !cssHeight) return;
+      state.zoom = 0.92 * Math.min(cssWidth / width, cssHeight / height);
+      state.panX = (cssWidth - width * state.zoom) / 2;
+      state.panY = (cssHeight - height * state.zoom) / 2;
+      updateZoomText();
+      requestRender();
+    }
+
+    function zoomAt(factor, sx, sy) {
+      const { width, height } = state.meta;
+      const minimum = 0.25 * Math.min(view.clientWidth / width, view.clientHeight / height);
+      const zoom = Math.min(64, Math.max(minimum, state.zoom * factor));
+      state.panX = sx - (sx - state.panX) * zoom / state.zoom;
+      state.panY = sy - (sy - state.panY) * zoom / state.zoom;
+      state.zoom = zoom;
+      followWindow = false;
+      updateZoomText();
+      requestRender();
+    }
+
+    function zoomCenter(factor) {
+      zoomAt(factor, view.clientWidth / 2, view.clientHeight / 2);
+    }
+
+    function updateZoomText() {
+      $("zoomText").textContent = `${(state.zoom * 100).toFixed(state.zoom < 0.1 ? 1 : 0)}%`;
+    }
+
+    function screenPoint(event) {
+      const rect = view.getBoundingClientRect();
+      return { sx: event.clientX - rect.left, sy: event.clientY - rect.top };
+    }
+
+    function toImage({ sx, sy }) {
+      let x = (sx - state.panX) / state.zoom;
+      let y = (sy - state.panY) / state.zoom;
+      if (state.meta.step === "rotate") {
+        const { width, height } = state.meta;
+        const angle = state.rotation * Math.PI / 180;
+        const dx = x - width / 2;
+        const dy = y - height / 2;
+        x = Math.cos(angle) * dx - Math.sin(angle) * dy + width / 2;
+        y = Math.sin(angle) * dx + Math.cos(angle) * dy + height / 2;
+      }
+      return { x, y };
+    }
+
+    // -------------------------------------------------------------- editing
+
+    function rectFrom(a, b) {
+      const x = Math.round(Math.min(a.x, b.x));
+      const y = Math.round(Math.min(a.y, b.y));
+      return { x, y, w: Math.round(Math.max(a.x, b.x)) - x, h: Math.round(Math.max(a.y, b.y)) - y };
+    }
+
+    function setPaint() {
+      mctx.globalCompositeOperation = state.paint === "free" ? "destination-out" : "source-over";
+      mctx.fillStyle = `rgb(${BLOCKED_RGB.join(",")})`;
+      mctx.strokeStyle = mctx.fillStyle;
+      mctx.lineWidth = state.brush;
+      mctx.lineCap = "round";
+      mctx.lineJoin = "round";
+    }
+
+    function touch(x0, y0, x1, y1) {
+      const { width, height } = state.meta;
+      x0 = Math.max(0, Math.floor(x0));
+      y0 = Math.max(0, Math.floor(y0));
+      x1 = Math.min(width, Math.ceil(x1));
+      y1 = Math.min(height, Math.ceil(y1));
+      if (x1 <= x0 || y1 <= y0) return;
+      dirty = dirty
+        ? { x0: Math.min(dirty.x0, x0), y0: Math.min(dirty.y0, y0), x1: Math.max(dirty.x1, x1), y1: Math.max(dirty.y1, y1) }
+        : { x0, y0, x1, y1 };
+    }
+
+    function beginEdit() {
+      bctx.globalCompositeOperation = "copy";
+      bctx.drawImage(mask, 0, 0);
+      dirty = null;
+    }
+
+    function endEdit() {
+      mctx.globalCompositeOperation = "source-over";
+      if (!dirty) return;
+      const { x0, y0, x1, y1 } = dirty;
+      const entry = {
+        x: x0,
+        y: y0,
+        before: bctx.getImageData(x0, y0, x1 - x0, y1 - y0),
+        after: mctx.getImageData(x0, y0, x1 - x0, y1 - y0),
+      };
+      undoStack.push(entry);
+      redoStack.length = 0;
+      // Drop the oldest patches when the history grows too large.
+      let bytes = undoStack.reduce((sum, e) => sum + 2 * e.before.data.length, 0);
+      while (bytes > UNDO_BYTES && undoStack.length > 1) bytes -= 2 * undoStack.shift().before.data.length;
+      dirty = null;
+      updateHistory();
+      requestRender();
+    }
+
+    function stroke(a, b) {
+      setPaint();
+      if (a.x === b.x && a.y === b.y) {
+        mctx.beginPath();
+        mctx.arc(a.x, a.y, state.brush / 2, 0, Math.PI * 2);
+        mctx.fill();
+      } else {
+        mctx.beginPath();
+        mctx.moveTo(a.x, a.y);
+        mctx.lineTo(b.x, b.y);
+        mctx.stroke();
+      }
+      const r = state.brush / 2 + 2;
+      touch(Math.min(a.x, b.x) - r, Math.min(a.y, b.y) - r, Math.max(a.x, b.x) + r, Math.max(a.y, b.y) + r);
+    }
+
+    function fillRect(a, b) {
+      const r = rectFrom(a, b);
+      if (r.w < 1 || r.h < 1) return;
+      beginEdit();
+      setPaint();
+      mctx.fillRect(r.x, r.y, r.w, r.h);
+      touch(r.x, r.y, r.x + r.w, r.y + r.h);
+      endEdit();
+    }
+
+    function fillPolygon() {
+      const points = gesture.polygon;
+      gesture.polygon = [];
+      if (points.length < 3) {
+        requestRender();
+        return;
+      }
+      beginEdit();
+      setPaint();
+      mctx.beginPath();
+      mctx.moveTo(points[0].x, points[0].y);
+      for (const p of points.slice(1)) mctx.lineTo(p.x, p.y);
+      mctx.closePath();
+      mctx.fill();
+      const xs = points.map((p) => p.x);
+      const ys = points.map((p) => p.y);
+      touch(Math.min(...xs) - 1, Math.min(...ys) - 1, Math.max(...xs) + 1, Math.max(...ys) + 1);
+      endEdit();
+    }
+
+    // Scanline fill of the 4-connected region with the class under the cursor.
+    function floodFill(p) {
+      const { width, height } = state.meta;
+      const x = Math.floor(p.x);
+      const y = Math.floor(p.y);
+      if (x < 0 || y < 0 || x >= width || y >= height) return;
+      const image = mctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      const blocked = (i) => data[4 * i + 3] > 127;
+      const target = blocked(y * width + x);
+      const toBlocked = state.paint === "blocked";
+      if (target === toBlocked) return;
+      const value = toBlocked ? [...BLOCKED_RGB, 255] : [0, 0, 0, 0];
+      const stack = [x, y];
+      let x0 = x, x1 = x, y0 = y, y1 = y;
+      while (stack.length) {
+        const cy = stack.pop();
+        const cx = stack.pop();
+        const row = cy * width;
+        if (blocked(row + cx) !== target) continue;
+        let left = cx;
+        let right = cx;
+        while (left > 0 && blocked(row + left - 1) === target) left--;
+        while (right < width - 1 && blocked(row + right + 1) === target) right++;
+        for (let i = row + left; i <= row + right; i++) data.set(value, 4 * i);
+        x0 = Math.min(x0, left);
+        x1 = Math.max(x1, right);
+        y0 = Math.min(y0, cy);
+        y1 = Math.max(y1, cy);
+        for (const ny of [cy - 1, cy + 1]) {
+          if (ny < 0 || ny >= height) continue;
+          let inRun = false;
+          for (let nx = left; nx <= right; nx++) {
+            const match = blocked(ny * width + nx) === target;
+            if (match && !inRun) stack.push(nx, ny);
+            inRun = match;
+          }
+        }
+      }
+      beginEdit();
+      mctx.putImageData(image, 0, 0, x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+      touch(x0, y0, x1 + 1, y1 + 1);
+      endEdit();
+    }
+
+    function undo() {
+      const entry = undoStack.pop();
+      if (!entry) return;
+      mctx.putImageData(entry.before, entry.x, entry.y);
+      redoStack.push(entry);
+      updateHistory();
+      requestRender();
+    }
+
+    function redo() {
+      const entry = redoStack.pop();
+      if (!entry) return;
+      mctx.putImageData(entry.after, entry.x, entry.y);
+      undoStack.push(entry);
+      updateHistory();
+      requestRender();
+    }
+
+    function updateHistory() {
+      $("undo").disabled = !undoStack.length;
+      $("redo").disabled = !redoStack.length;
+    }
+
+    // --------------------------------------------------------------- inputs
+
+    function setActive(containerId, attribute, value) {
+      for (const button of $(containerId).querySelectorAll(`[data-${attribute}]`)) {
+        button.classList.toggle("active", button.dataset[attribute] === value);
+      }
+    }
+
+    function setBase(name) {
+      if (name !== "none" && !state.bases[name]) return;
+      state.base = name;
+      setActive("baseButtons", "base", name);
+      requestRender();
+    }
+
+    function setTool(tool) {
+      state.tool = tool;
+      gesture.polygon = [];
+      gesture.shape = null;
+      setActive("toolButtons", "tool", tool);
+      requestRender();
+    }
+
+    function setPaintClass(paint) {
+      state.paint = paint;
+      setActive("paintButtons", "paint", paint);
+      requestRender();
+    }
+
+    function setBrush(size) {
+      state.brush = Math.max(1, Math.min(200, Math.round(size)));
+      $("brush").value = String(state.brush);
+      $("brushText").textContent = formatLength(state.brush * state.meta.resolution);
+      requestRender();
+    }
+
+    function setOpacity(value) {
+      state.opacity = value / 100;
+      $("opacity").value = String(value);
+      $("opacityText").textContent = `${value}%`;
+      requestRender();
+    }
+
+    function setRotation(value) {
+      const degrees = Math.max(-90, Math.min(90, Math.round(Number(value) * 10) / 10));
+      if (!Number.isFinite(degrees)) return;
+      state.rotation = degrees;
+      $("rotation").value = String(degrees);
+      $("rotationNumber").value = degrees.toFixed(1);
+      requestRender();
+    }
+
+    function setGrid(value) {
+      state.grid = Number(value);
+      $("gridText").textContent = `${state.grid} px`;
+      requestRender();
+    }
+
+    function bindControls() {
+      for (const button of document.querySelectorAll("[data-base]")) {
+        button.addEventListener("click", () => setBase(button.dataset.base));
+      }
+      for (const button of document.querySelectorAll("[data-tool]")) {
+        button.addEventListener("click", () => setTool(button.dataset.tool));
+      }
+      for (const button of document.querySelectorAll("[data-paint]")) {
+        button.addEventListener("click", () => setPaintClass(button.dataset.paint));
+      }
+      $("opacity").addEventListener("input", (e) => setOpacity(Number(e.target.value)));
+      $("brush").addEventListener("input", (e) => setBrush(Number(e.target.value)));
+      $("rotation").addEventListener("input", (e) => setRotation(e.target.value));
+      $("rotationNumber").addEventListener("change", (e) => setRotation(e.target.value));
+      $("rotationReset").addEventListener("click", () => setRotation(0));
+      $("grid").addEventListener("input", (e) => setGrid(e.target.value));
+      $("undo").addEventListener("click", undo);
+      $("redo").addEventListener("click", redo);
+      $("resetMask").addEventListener("click", resetMask);
+      $("zoomIn").addEventListener("click", () => zoomCenter(1.25));
+      $("zoomOut").addEventListener("click", () => zoomCenter(0.8));
+      $("fit").addEventListener("click", fit);
+      $("save").addEventListener("click", save);
+      // Buttons and sliders give the keyboard back to the map after a click.
+      document.addEventListener("pointerup", () => {
+        const active = document.activeElement;
+        if (active && (active.tagName === "BUTTON" || active.type === "range")) active.blur();
+      });
+      new ResizeObserver(() => {
+        if (state.meta && followWindow) fit();
+        else requestRender();
+      }).observe(view);
+      window.addEventListener("beforeunload", (event) => {
+        if (state.meta && !state.saved) event.preventDefault();
+      });
+    }
+
+    function bindPointer() {
+      view.addEventListener("contextmenu", (event) => event.preventDefault());
+      view.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const { sx, sy } = screenPoint(event);
+        const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+        zoomAt(Math.exp(-delta * 0.0015), sx, sy);
+      }, { passive: false });
+
+      view.addEventListener("dblclick", () => {
+        if (state.saved || state.tool !== "polygon" || gesture.space) return;
+        // Both presses of a double-click added a vertex; keep the first.
+        gesture.polygon.pop();
+        if (gesture.polygon.length >= 3) fillPolygon();
+        requestRender();
+      });
+
+      view.addEventListener("pointerdown", (event) => {
+        if (state.saved || !state.meta) return;
+        const screen = screenPoint(event);
+        view.setPointerCapture(event.pointerId);
+        if (event.button === 1 || event.button === 2 || (event.button === 0 && gesture.space)) {
+          gesture.pan = { sx: screen.sx, sy: screen.sy, panX: state.panX, panY: state.panY };
+          view.classList.add("panning");
+          return;
+        }
+        if (event.button !== 0 || state.meta.step !== "edit") return;
+        const p = toImage(screen);
+        if (state.tool === "brush") {
+          beginEdit();
+          gesture.stroke = p;
+          stroke(p, p);
+        } else if (state.tool === "line" || state.tool === "rect") {
+          gesture.shape = { tool: state.tool, start: p, end: p };
+        } else if (state.tool === "polygon") {
+          gesture.polygon.push(p);
+        } else if (state.tool === "fill") {
+          toast("Filling", true);
+          setTimeout(() => {
+            floodFill(p);
+            toast("");
+          }, 20);
+        }
+        requestRender();
+      });
+
+      view.addEventListener("pointermove", (event) => {
+        if (!state.meta) return;
+        const screen = screenPoint(event);
+        state.cursor = toImage(screen);
+        if (gesture.pan) {
+          state.panX = gesture.pan.panX + screen.sx - gesture.pan.sx;
+          state.panY = gesture.pan.panY + screen.sy - gesture.pan.sy;
+          followWindow = false;
+        } else if (gesture.stroke) {
+          stroke(gesture.stroke, state.cursor);
+          gesture.stroke = state.cursor;
+        } else if (gesture.shape) {
+          gesture.shape.end = state.cursor;
+        }
+        requestRender();
+      });
+
+      const finish = () => {
+        if (gesture.pan) {
+          gesture.pan = null;
+          view.classList.remove("panning");
+        }
+        if (gesture.stroke) {
+          gesture.stroke = null;
+          endEdit();
+        }
+        const shape = gesture.shape;
+        gesture.shape = null;
+        if (shape && shape.tool === "line") {
+          beginEdit();
+          stroke(shape.start, shape.end);
+          endEdit();
+        }
+        if (shape && shape.tool === "rect") fillRect(shape.start, shape.end);
+        requestRender();
+      };
+      view.addEventListener("pointerup", finish);
+      view.addEventListener("pointercancel", finish);
+      view.addEventListener("pointerleave", () => {
+        state.cursor = null;
+        requestRender();
+      });
+    }
+
+    function bindKeys() {
+      document.addEventListener("keydown", (event) => {
+        if (!state.meta || state.saved || event.target.tagName === "INPUT") return;
+        const key = event.key;
+        const command = event.ctrlKey || event.metaKey;
+        const edit = state.meta.step === "edit";
+        if (key === " ") {
+          gesture.space = true;
+          event.preventDefault();
+        } else if (key === "0") {
+          fit();
+        } else if (["1", "2", "3"].includes(key)) {
+          setBase(["top", "ground", "none"][Number(key) - 1]);
+        } else if (key.toLowerCase() === "m" && !command) {
+          state.maskVisible = !state.maskVisible;
+          requestRender();
+        } else if (key === "+" || key === "=") {
+          zoomCenter(1.25);
+        } else if (key === "-") {
+          zoomCenter(0.8);
+        } else if (!edit && (key === "ArrowLeft" || key === "ArrowRight")) {
+          event.preventDefault();
+          const step = (event.shiftKey ? 1 : 0.1) * (key === "ArrowLeft" ? -1 : 1);
+          setRotation(state.rotation + step);
+        } else if (edit && command && key.toLowerCase() === "z") {
+          event.preventDefault();
+          if (event.shiftKey) redo();
+          else undo();
+        } else if (edit && command && key.toLowerCase() === "y") {
+          event.preventDefault();
+          redo();
+        } else if (edit && !command && "blrpf".includes(key.toLowerCase()) && key.length === 1) {
+          setTool({ b: "brush", l: "line", r: "rect", p: "polygon", f: "fill" }[key.toLowerCase()]);
+        } else if (edit && !command && key.toLowerCase() === "x") {
+          setPaintClass(state.paint === "blocked" ? "free" : "blocked");
+        } else if (edit && key === "[") {
+          setBrush(state.brush / 1.25);
+        } else if (edit && key === "]") {
+          setBrush(state.brush * 1.25 + 0.5);
+        } else if (edit && key === "Enter") {
+          fillPolygon();
+        } else if (edit && key === "Escape") {
+          gesture.polygon = [];
+          gesture.shape = null;
+          requestRender();
+        } else if (edit && key === "Backspace") {
+          gesture.polygon.pop();
+          requestRender();
+        }
+      });
+      document.addEventListener("keyup", (event) => {
+        if (event.key === " ") gesture.space = false;
+      });
+    }
+
+    // ----------------------------------------------------------------- save
+
+    async function resetMask() {
+      if (!confirm("Discard all edits and restore the automatic map?")) return;
+      await loadMask();
+      undoStack.length = 0;
+      redoStack.length = 0;
+      updateHistory();
+      requestRender();
+    }
+
+    async function encodeMask() {
+      const { width, height } = state.meta;
+      const image = mctx.getImageData(0, 0, width, height);
+      const data = image.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const value = data[i + 3] > 127 ? 0 : 255;
+        data[i] = value;
+        data[i + 1] = value;
+        data[i + 2] = value;
+        data[i + 3] = 255;
+      }
+      const [canvas, context] = makeCanvas(width, height);
+      context.putImageData(image, 0, 0);
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    }
+
+    async function save() {
+      const step = state.meta.step;
+      const question = step === "rotate"
+        ? `Save the rotation of ${state.rotation.toFixed(1)}° and continue? It cannot be changed afterwards.`
+        : "Save the navigable area and continue? It cannot be changed afterwards.";
+      if (!confirm(question)) return;
+      $("save").disabled = true;
+      showOverlay("Saving");
+      try {
+        const body = step === "rotate"
+          ? JSON.stringify({ rotation_deg: state.rotation })
+          : await encodeMask();
+        const response = await fetch("/save", {
+          method: "POST",
+          headers: { "Content-Type": step === "rotate" ? "application/json" : "image/png" },
+          body,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        state.saved = true;
+        if (step === "rotate") {
+          showOverlay("Saved", "Step 2 opens here once the map is rebuilt.");
+          await waitForStep("edit");
+          location.reload();
+        } else {
+          showOverlay("Saved", "The pipeline continues. You can close this tab.");
+        }
+      } catch (error) {
+        $("save").disabled = false;
+        showOverlay("");
+        alert(`Saving failed: ${error.message}`);
+      }
+    }
+
+    // The next step is served at the same address after the pipeline rebuilds the map.
+    async function waitForStep(step) {
+      for (;;) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        try {
+          const response = await fetch("/meta.json", { cache: "no-store" });
+          if (response.ok && (await response.json()).step === step) return;
+        } catch (error) {
+          // The server is down between the steps.
+        }
+      }
+    }
+
+    // ----------------------------------------------------------------- init
+
+    function showStep(step) {
+      const text = STEP_TEXT[step];
+      document.title = `${text.title} - Map Editor`;
+      $("title").textContent = text.title;
+      $("instructions").textContent = text.instructions;
+      for (const node of document.querySelectorAll("[data-step]")) node.hidden = node.dataset.step !== step;
+      const order = Object.keys(STEP_TEXT);
+      for (const node of document.querySelectorAll("[data-index]")) {
+        const position = order.indexOf(node.dataset.index) - order.indexOf(step);
+        node.classList.toggle("current", position === 0);
+        node.classList.toggle("done", position < 0);
+        node.querySelector(".dot").textContent = position < 0 ? "✓" : String(order.indexOf(node.dataset.index) + 1);
+      }
+      for (const [key, label] of [...KEYS.common, ...KEYS[step]]) {
+        const term = document.createElement("dt");
+        const kbd = document.createElement("kbd");
+        kbd.textContent = key;
+        term.append(kbd);
+        const description = document.createElement("dd");
+        description.textContent = label;
+        $("keys").append(term, description);
+      }
+    }
+
+    async function init() {
+      bindControls();
+      bindPointer();
+      bindKeys();
+      const response = await fetch("/meta.json", { cache: "no-store" });
+      const meta = await response.json();
+      state.meta = meta;
+      showStep(meta.step);
+      if (meta.width > 32767 || meta.height > 32767 || meta.width * meta.height > 268e6) {
+        throw new Error(`The ${meta.width} x ${meta.height} map exceeds browser canvas limits.`);
+      }
+      [mask, mctx] = makeCanvas(meta.width, meta.height);
+      if (meta.step === "edit") [backup, bctx] = makeCanvas(meta.width, meta.height);
+      await loadMask();
+      for (const name of meta.views) state.bases[name] = await fetchBitmap(`/view/${name}.jpg`);
+      setOpacity(45);
+      setBrush(15);
+      setGrid(80);
+      setTool("brush");
+      setPaintClass("blocked");
+      setBase(meta.views.includes("top") ? "top" : "none");
+      updateHistory();
+      fit();
+      showOverlay("");
+      $("save").disabled = false;
+    }
+
+    init().catch((error) => showOverlay("The editor failed to load", error.message));
+  </script>
+</body>
+</html>

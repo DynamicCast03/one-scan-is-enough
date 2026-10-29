@@ -1,0 +1,19 @@
+# The closed-loop Gaussian scene environment of one_scan_is_enough.simulation.environment.
+# Observations use the camera of rendered training frames, JPEG encoding included.
+defaults:
+  - /planning_map@planning_map: default
+  - /planner@planner: default
+  - /camera@rendering: observation
+  - /path_sampling@path_sampling: default
+  - _self_
+# Runs of one_scan_is_enough.simulation.execution.Navigation.
+execution:
+  # Executed waypoints per decision, taken from every second predicted one.
+  waypoints_per_decision: 4
+  # Runs end after this many executed waypoints, in post-training and evaluation.
+  max_waypoints: 300
+  # The stop rule of one_scan_is_enough.simulation.execution.truncate_at_stop.
+  stop:
+    distance_m: 0.04
+    heading_deg: 5.0
+    min_waypoints: 10

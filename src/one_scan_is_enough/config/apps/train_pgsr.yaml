@@ -1,0 +1,33 @@
+# @package _global_
+input:
+  # Output of export-pgsr: images/, depths/ and sparse/.
+  scene_dir: ???
+output:
+  model_dir: ???
+pgsr:
+  # PGSR checkout; null uses the third_party/PGSR submodule.
+  root: null
+  # Interpreter of the PGSR environment; null uses the current one.
+  python: null
+  # Directory prepended to PYTHONPATH, for CUDA extensions installed apart.
+  pythonpath: null
+# PGSR train.py arguments of the same names. Booleans become flags, lists
+# become multiple values, and null leaves the PGSR default.
+train:
+  iterations: 30000
+  resolution: 1
+  depths: depths
+  # Decode views on demand in background threads instead of preloading all
+  # views into memory.
+  stream_views: true
+  max_abs_split_points: 0
+  opacity_cull_threshold: 0.05
+  dn_l1_weight_init: 0.5
+  dn_l1_weight_final: 0.1
+  save_only_final: true
+  test_iterations: [-1]
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/train_pgsr/${now:%Y-%m-%d_%H-%M-%S}

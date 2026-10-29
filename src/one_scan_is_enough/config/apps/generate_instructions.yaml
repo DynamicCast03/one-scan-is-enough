@@ -1,0 +1,25 @@
+# @package _global_
+defaults:
+  - /llm: default
+  - _self_
+
+input:
+  scene_dir: ???
+seed: 0
+instruction:
+  # Shares of the instruction types of one_scan_is_enough.instruction.prompts:
+  # vln (Route following), object (Object Goal) and need (Human Demand). Each
+  # trajectory gets one type; counts follow the shares and seed shuffles them
+  # over the trajectories.
+  types:
+    vln: 1
+    object: 1
+    need: 1
+  # Label every trajectory again, for example with another model, instead of
+  # only those without an instruction.
+  relabel: false
+hydra:
+  job:
+    chdir: false
+  run:
+    dir: outputs/generate_instructions/${now:%Y-%m-%d_%H-%M-%S}

@@ -1,0 +1,4 @@
+# Oversized near Gaussians pushed behind scene content per view; see
+# one_scan_is_enough.rendering.frames.
+alpha: 0.03
+depth_margin_m: 10.0

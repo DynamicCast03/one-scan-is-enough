@@ -1,0 +1,10 @@
+# The policy camera: rendered training frames and closed-loop observations.
+defaults:
+  - /culling@culling: default
+  - _self_
+width: 640
+height: 480
+supersample: 2
+camera_height_m: 0.5
+vertical_fov_deg: 79.0
+jpeg_quality: 95
